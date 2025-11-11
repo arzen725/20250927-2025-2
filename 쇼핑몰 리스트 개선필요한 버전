@@ -1,0 +1,245 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_PRODUCTS 5
+#define MAX_NAME_LEN 100
+
+typedef struct {
+    int id;
+    char name[MAX_NAME_LEN];
+    int price;
+    int stock_qty;
+    int sell_qty;
+    long long total_sales_amount;
+    int initialized;
+} Product;
+
+Product products[MAX_PRODUCTS];
+
+void initialize_products() {
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        products[i].id = i + 1;
+        strcpy(products[i].name, "N/A");
+        products[i].price = 0;
+        products[i].stock_qty = 0;
+        products[i].sell_qty = 0;
+        products[i].total_sales_amount = 0;
+        products[i].initialized = 0;
+    }
+}
+
+void print_menu() {
+    printf("\n--- [쇼핑몰 관리 프로그램] ---\n");
+    printf("원하는 메뉴를 선택하세요.(1. 입고, 2. 판매, 3. 개별현황, 4. 전체현황, 5. 종료)\n");
+    printf("> ");
+}
+
+void handle_stock() {
+    int id, stock_amount, price;
+
+    printf("상품ID (1-5) : ");
+    scanf("%d", &id);
+
+    if (id < 1 || id > MAX_PRODUCTS) {
+        printf("오류: 상품 ID는 1에서 %d 사이여야 합니다.\n", MAX_PRODUCTS);
+        return;
+    }
+
+    int index = id - 1;
+
+    if (products[index].initialized == 0) {
+        printf(" (신규 상품 등록)\n");
+    }
+    else {
+        printf(" (기존 상품 입고)\n");
+    }
+
+    printf("상품명 : ");
+    scanf("%s", products[index].name);
+
+    printf("입고량 : ");
+    scanf("%d", &stock_amount);
+
+    printf("판매가격 : ");
+    scanf("%d", &price);
+
+    products[index].stock_qty += stock_amount;
+    products[index].price = price;
+    products[index].initialized = 1;
+
+    printf("ID %d (%s) 상품이 입고되었습니다. (현재 총 입고량: %d)\n",
+        id, products[index].name, products[index].stock_qty);
+}
+
+void handle_sell() {
+    int id, sell_amount;
+
+    printf("상품ID (1-5) : ");
+    scanf("%d", &id);
+
+    if (id < 1 || id > MAX_PRODUCTS) {
+        printf("오류: 상품 ID는 1에서 %d 사이여야 합니다.\n", MAX_PRODUCTS);
+        return;
+    }
+
+    int index = id - 1;
+
+    if (products[index].initialized == 0) {
+        printf("오류: 해당 ID의 상품 정보가 없습니다. (입고 메뉴에서 먼저 등록하세요)\n");
+        return;
+    }
+
+    printf("판매량 : ");
+    scanf("%d", &sell_amount);
+
+    int current_stock = products[index].stock_qty - products[index].sell_qty;
+    if (sell_amount > current_stock) {
+        printf("오류: 재고가 부족합니다. (현재 재고: %d개)\n", current_stock);
+        return;
+    }
+
+    products[index].sell_qty += sell_amount;
+    products[index].total_sales_amount += (long long)sell_amount * products[index].price;
+
+    printf("ID %d (%s) 상품 %d개가 판매되었습니다. (남은 재고: %d)\n",
+        id, products[index].name, sell_amount, products[index].stock_qty - products[index].sell_qty);
+}
+
+void handle_individual_status() {
+    int id;
+
+    printf("상품ID (1-5) : ");
+    scanf("%d", &id);
+
+    if (id < 1 || id > MAX_PRODUCTS) {
+        printf("오류: 상품 ID는 1에서 %d 사이여야 합니다.\n", MAX_PRODUCTS);
+        return;
+    }
+
+    int index = id - 1;
+
+    if (products[index].initialized == 0) {
+        printf("오류: 해당 ID의 상품 정보가 없습니다.\n");
+        return;
+    }
+
+    printf("\n--- ID %d 상품 개별 현황 ---\n", id);
+    printf("상품명: %s\n", products[index].name);
+    printf("상품가격: %d원\n", products[index].price);
+    printf("총 입고량: %d\n", products[index].stock_qty);
+    printf("총 판매량: %d\n", products[index].sell_qty);
+    printf("현재 재고: %d\n", products[index].stock_qty - products[index].sell_qty);
+    printf("총판매금액: %lld원\n", products[index].total_sales_amount);
+    printf("------------------------------\n");
+}
+
+void handle_overall_status() {
+    int total_stock_qty = 0;
+    int total_sell_qty = 0;
+    int max_sell_qty = -1;
+    int min_sell_qty = 1000001;
+    int max_sell_id = -1;
+    int min_sell_id = -1;
+    int initialized_count = 0;
+
+    printf("\n--- 전체 상품 현황 ---\n");
+
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        if (products[i].initialized == 1) {
+            initialized_count++;
+            total_stock_qty += products[i].stock_qty;
+            total_sell_qty += products[i].sell_qty;
+
+            if (products[i].sell_qty > max_sell_qty) {
+                max_sell_qty = products[i].sell_qty;
+                max_sell_id = products[i].id;
+            }
+
+            if (products[i].sell_qty < min_sell_qty) {
+                min_sell_qty = products[i].sell_qty;
+                min_sell_id = products[i].id;
+            }
+        }
+    }
+
+    if (initialized_count == 0) {
+        printf("아직 등록된 상품이 없습니다.\n");
+        return;
+    }
+
+    printf("재고수량: ");
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        printf("%d", products[i].stock_qty - products[i].sell_qty);
+    }
+    printf("\n");
+
+    double sales_rate = 0.0;
+    if (total_stock_qty > 0) {
+        sales_rate = ((double)total_sell_qty / total_stock_qty) * 100.0;
+    }
+    printf("총 판매량: %d (판매율 %.2f%%)\n", total_sell_qty, sales_rate);
+
+    if (max_sell_id != -1) {
+        int idx = max_sell_id - 1;
+        printf("가장 많이 판매된 상품 : ID %d, 상품명 : %s, 판매량 %d\n",
+            products[idx].id, products[idx].name, products[idx].sell_qty);
+    }
+
+    if (min_sell_id != -1) {
+        int idx = min_sell_id - 1;
+        printf("가장 적게 판매된 상품 : ID %d, 상품명 : %s, 판매량 %d\n",
+            products[idx].id, products[idx].name, products[idx].sell_qty);
+    }
+
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        if (products[i].initialized == 1) {
+            int current_stock = products[i].stock_qty - products[i].sell_qty;
+            if (current_stock <= 2) {
+                printf("상품 ID %d : 상품명: %s 재고부족(%d)\n",
+                    products[i].id, products[i].name, current_stock);
+            }
+        }
+    }
+    printf("------------------------\n");
+}
+
+int main() {
+    int choice = 0;
+    initialize_products();
+
+    while (1) {
+        print_menu();
+        int scan_result = scanf("%d", &choice);
+
+        if (scan_result != 1) {
+            printf("오류: 숫자를 입력해야 합니다.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+
+        switch (choice) {
+        case 1:
+            handle_stock();
+            break;
+        case 2:
+            handle_sell();
+            break;
+        case 3:
+            handle_individual_status();
+            break;
+        case 4:
+            handle_overall_status();
+            break;
+        case 5:
+            printf("프로그램을 종료합니다.\n");
+            return 0;
+        default:
+            printf("잘못된 선택입니다. 1-5 사이의 숫자를 입력하세요.\n");
+            break;
+        }
+    }
+
+    return 0;
+}
